@@ -1,8 +1,10 @@
 package com.facebook.presto.plugin.ignite;
 
 import com.facebook.presto.plugin.jdbc.*;
+import com.facebook.presto.spi.ConnectorSession;
 import com.facebook.presto.spi.PrestoException;
 import com.facebook.presto.spi.SchemaTableName;
+import com.facebook.presto.spi.TableNotFoundException;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -18,8 +20,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
+import static com.facebook.presto.plugin.jdbc.JdbcErrorCode.JDBC_ERROR;
 import static java.util.Locale.ENGLISH;
 import static com.facebook.presto.spi.StandardErrorCode.NOT_SUPPORTED;
 import static com.google.common.collect.Iterables.getOnlyElement;
@@ -113,6 +117,38 @@ public class IgniteClient extends BaseJdbcClient {
     }
 
     @Override
+    public List<JdbcColumnHandle> getColumns(ConnectorSession session, JdbcTableHandle tableHandle) {
+        try (Connection connection = connectionFactory.openConnection()) {
+            try (ResultSet resultSet = getColumns(tableHandle, connection.getMetaData())) {
+                List<JdbcColumnHandle> columns = new ArrayList<>();
+                while (resultSet.next()) {
+                    log.debug("DATA_TYPE" + resultSet.getInt("DATA_TYPE"));
+                    log.debug("COLUMN_SIZE" + resultSet.getInt("COLUMN_SIZE"));
+                    log.debug("DECIMAL_DIGITS" + resultSet.getInt("DECIMAL_DIGITS"));
+                    log.debug("COLUMN_NAME" + resultSet.getInt("COLUMN_NAME"));
+                    JdbcTypeHandle typeHandle = new JdbcTypeHandle(
+                            resultSet.getInt("DATA_TYPE"),
+                            resultSet.getInt("COLUMN_SIZE"),
+                            resultSet.getInt("DECIMAL_DIGITS"));
+                    Optional<ReadMapping> columnMapping = toPrestoType(session, typeHandle);
+                    // skip unsupported column types
+                    if (columnMapping.isPresent()) {
+                        String columnName = resultSet.getString("COLUMN_NAME");
+                        columns.add(new JdbcColumnHandle(connectorId, columnName, typeHandle, columnMapping.get().getType()));
+                    }
+                }
+                if (columns.isEmpty()) {
+                    // In rare cases (e.g. PostgreSQL) a table might have no columns.
+                    throw new TableNotFoundException(tableHandle.getSchemaTableName());
+                }
+                return ImmutableList.copyOf(columns);
+            }
+        } catch (SQLException e) {
+            throw new PrestoException(JDBC_ERROR, e);
+        }
+    }
+
+    @Override
     protected SchemaTableName getSchemaTableName(ResultSet resultSet)
             throws SQLException {
         String tableSchema = resultSet.getString("TABLE_SCHEM");
@@ -124,6 +160,16 @@ public class IgniteClient extends BaseJdbcClient {
             tableName = tableName.toLowerCase();
         }
         return new SchemaTableName(tableSchema, tableName);
+    }
+
+    private static ResultSet getColumns(JdbcTableHandle tableHandle, DatabaseMetaData metadata)
+            throws SQLException {
+        String escape = metadata.getSearchStringEscape();
+        return metadata.getColumns(
+                tableHandle.getCatalogName(),
+                escapeNamePattern(tableHandle.getSchemaName(), escape),
+                escapeNamePattern(tableHandle.getTableName(), escape),
+                null);
     }
 
 
