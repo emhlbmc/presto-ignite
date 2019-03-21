@@ -16,6 +16,6 @@ public class IgniteClientModule implements Module {
     public void configure(Binder binder) {
         binder.bind(JdbcClient.class).to(IgniteClient.class).in(Scopes.SINGLETON);
         configBinder(binder).bindConfig(BaseJdbcConfig.class);
-        configBinder(binder).bindConfig(IgniteClient.class);
+        configBinder(binder).bindConfig(IgniteConfig.class);
     }
 }
