@@ -230,6 +230,12 @@
                 <version>2.8.1</version>
             </plugin>
             <plugin>
+                <groupId>com.facebook.presto</groupId>
+                <artifactId>presto-maven-plugin</artifactId>
+                <version>0.3</version>
+                <extensions>true</extensions>
+            </plugin>
+            <plugin>
                 <groupId>org.sonatype.plugins</groupId>
                 <artifactId>nexus-staging-maven-plugin</artifactId>
                 <version>1.6.2</version>
