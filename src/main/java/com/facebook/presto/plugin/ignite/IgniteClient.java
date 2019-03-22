@@ -164,12 +164,12 @@ public class IgniteClient extends BaseJdbcClient {
 
     private static ResultSet getColumns(JdbcTableHandle tableHandle, DatabaseMetaData metadata)
             throws SQLException {
-        String escape = metadata.getSearchStringEscape();
-        return metadata.getColumns(
+        ResultSet columnSet = metadata.getColumns(
                 tableHandle.getCatalogName(),
-                escapeNamePattern(tableHandle.getSchemaName(), escape),
-                escapeNamePattern(tableHandle.getTableName(), escape),
+                tableHandle.getSchemaName(),
+                tableHandle.getTableName(),
                 null);
+        return columnSet;
     }
 
 
