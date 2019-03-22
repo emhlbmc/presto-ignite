@@ -122,10 +122,6 @@ public class IgniteClient extends BaseJdbcClient {
             try (ResultSet resultSet = getColumns(tableHandle, connection.getMetaData())) {
                 List<JdbcColumnHandle> columns = new ArrayList<>();
                 while (resultSet.next()) {
-                    log.debug("DATA_TYPE" + resultSet.getInt("DATA_TYPE"));
-                    log.debug("COLUMN_SIZE" + resultSet.getInt("COLUMN_SIZE"));
-                    log.debug("DECIMAL_DIGITS" + resultSet.getInt("DECIMAL_DIGITS"));
-                    log.debug("COLUMN_NAME" + resultSet.getInt("COLUMN_NAME"));
                     JdbcTypeHandle typeHandle = new JdbcTypeHandle(
                             resultSet.getInt("DATA_TYPE"),
                             resultSet.getInt("COLUMN_SIZE"),
